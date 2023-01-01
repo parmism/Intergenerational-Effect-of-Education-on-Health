@@ -1,0 +1,267 @@
+---------------------------------------------------------------------------------------------------------------------------------------------
+      name:  <unnamed>
+       log:  /Users/parmismey/Desktop/to_submit/log.log
+  log type:  text
+ opened on:  23 Nov 2022, 18:43:38
+
+. do "/Users/parmismey/Desktop/University of Toronto/Fall 2022/ECO375/375 project/Presentation /Analysis.do"
+
+. clear all
+
+. set more off
+
+. 
+. use "/Users/parmismey/Desktop/University of Toronto/Fall 2022/ECO375/375 project/Chevalier_Mehdiyar.dta"
+
+. 
+. 
+. // summary stats table
+. 
+. estpost summarize sf12p sf12m net_fam_inc hgcr avg_parental_educ white has_healthcare_provider
+
+             |  e(count)   e(sum_w)    e(mean)     e(Var)      e(sd)     e(min)     e(max)     e(sum) 
+-------------+----------------------------------------------------------------------------------------
+       sf12p |      1438       1438   46.53581   130.1582   11.40869      11.31      65.45   66918.49 
+       sf12m |      1438       1438   52.85978   76.18596   8.728457       11.4       69.4   76012.37 
+ net_fam_inc |      1134       1134   15512.25   1.62e+08   12720.18         26      75001   1.76e+07 
+        hgcr |      1438       1438   13.53199   7.430778   2.725945          0         20      19459 
+avg_parent~c |      1187       1187   10.93387   11.59027   3.404448          0         20    12978.5 
+       white |      1438       1438   .5055633    .250143    .500143          0          1        727 
+has_health~r |      1366       1366   .8814056   .1046064   .3234291          0          1       1204 
+
+. esttab using summaries.csv, cells("count mean sd min max") noobs
+(output written to summaries.csv)
+
+. 
+. 
+. 
+. 
+. /*
+> Project estimation calculations
+> */
+. 
+. 
+. /*
+> 0. summarize:
+> */
+. sum sf12p
+
+    Variable |        Obs        Mean    Std. dev.       Min        Max
+-------------+---------------------------------------------------------
+       sf12p |      1,438    46.53581    11.40869      11.31      65.45
+
+. sum sf12m
+
+    Variable |        Obs        Mean    Std. dev.       Min        Max
+-------------+---------------------------------------------------------
+       sf12m |      1,438    52.85978    8.728457       11.4       69.4
+
+. sum avg_parental_educ
+
+    Variable |        Obs        Mean    Std. dev.       Min        Max
+-------------+---------------------------------------------------------
+avg_parent~c |      1,187    10.93387    3.404448          0         20
+
+. 
+. 
+. /*
+> 1. Simple OLS:
+> */
+. 
+. reg sf12p avg_parental_educ, robust
+
+Linear regression                               Number of obs     =      1,187
+                                                F(1, 1185)        =      27.84
+                                                Prob > F          =     0.0000
+                                                R-squared         =     0.0203
+                                                Root MSE          =     11.059
+
+-----------------------------------------------------------------------------------
+                  |               Robust
+            sf12p | Coefficient  std. err.      t    P>|t|     [95% conf. interval]
+------------------+----------------------------------------------------------------
+avg_parental_educ |   .4673326   .0885653     5.28   0.000     .2935704    .6410949
+            _cons |   41.98613   1.064555    39.44   0.000      39.8975    44.07475
+-----------------------------------------------------------------------------------
+
+. estimates store a_1
+
+. 
+. reg sf12m avg_parental_educ, robust
+
+Linear regression                               Number of obs     =      1,187
+                                                F(1, 1185)        =       1.48
+                                                Prob > F          =     0.2237
+                                                R-squared         =     0.0012
+                                                Root MSE          =     8.5588
+
+-----------------------------------------------------------------------------------
+                  |               Robust
+            sf12m | Coefficient  std. err.      t    P>|t|     [95% conf. interval]
+------------------+----------------------------------------------------------------
+avg_parental_educ |   .0868788   .0713635     1.22   0.224    -.0531341    .2268917
+            _cons |   52.14411   .8246782    63.23   0.000     50.52611     53.7621
+-----------------------------------------------------------------------------------
+
+. estimates store a_2
+
+. 
+. 
+. //non-linearity through the educ_sq:
+. reg sf12p avg_parental_educ parental_educ_sq, robust   
+
+Linear regression                               Number of obs     =      1,187
+                                                F(2, 1184)        =      32.53
+                                                Prob > F          =     0.0000
+                                                R-squared         =     0.0313
+                                                Root MSE          =     11.002
+
+-----------------------------------------------------------------------------------
+                  |               Robust
+            sf12p | Coefficient  std. err.      t    P>|t|     [95% conf. interval]
+------------------+----------------------------------------------------------------
+avg_parental_educ |  -.7497203    .312684    -2.40   0.017    -1.363197   -.1362438
+ parental_educ_sq |   .0623058   .0143424     4.34   0.000     .0341665    .0904452
+            _cons |   47.12306   1.692381    27.84   0.000     43.80266    50.44346
+-----------------------------------------------------------------------------------
+
+. estimates store b_1
+
+. 
+. reg sf12m avg_parental_educ parental_educ_sq, robust
+
+Linear regression                               Number of obs     =      1,187
+                                                F(2, 1184)        =       1.23
+                                                Prob > F          =     0.2939
+                                                R-squared         =     0.0023
+                                                Root MSE          =     8.5578
+
+-----------------------------------------------------------------------------------
+                  |               Robust
+            sf12m | Coefficient  std. err.      t    P>|t|     [95% conf. interval]
+------------------+----------------------------------------------------------------
+avg_parental_educ |  -.2031536   .2594491    -0.78   0.434    -.7121848    .3058776
+ parental_educ_sq |   .0148479   .0132217     1.12   0.262    -.0110927    .0407885
+            _cons |   53.36827   1.280019    41.69   0.000     50.85692    55.87963
+-----------------------------------------------------------------------------------
+
+. estimates store b_2
+
+. 
+. 
+. 
+. // simple reg with controls:
+. reg sf12p avg_parental_educ hgcr white net_fam_inc has_healthcare_provider, robust
+
+Linear regression                               Number of obs     =        896
+                                                F(5, 890)         =      10.77
+                                                Prob > F          =     0.0000
+                                                R-squared         =     0.0453
+                                                Root MSE          =     10.679
+
+-----------------------------------------------------------------------------------------
+                        |               Robust
+                  sf12p | Coefficient  std. err.      t    P>|t|     [95% conf. interval]
+------------------------+----------------------------------------------------------------
+      avg_parental_educ |   .1968909   .1235414     1.59   0.111    -.0455755    .4393572
+                   hgcr |   .5380996   .1436441     3.75   0.000      .256179    .8200203
+                  white |  -.7894949   .8166893    -0.97   0.334    -2.392356    .8133665
+            net_fam_inc |   .0000924   .0000279     3.31   0.001     .0000376    .0001472
+has_healthcare_provider |   .5483918    1.21919     0.45   0.653     -1.84443    2.941214
+                  _cons |    36.1839   2.039759    17.74   0.000      32.1806     40.1872
+-----------------------------------------------------------------------------------------
+
+. estimates store c_1
+
+. 
+. reg sf12m avg_parental_educ hgcr white net_fam_inc has_healthcare_provider, robust
+
+Linear regression                               Number of obs     =        896
+                                                F(5, 890)         =       5.23
+                                                Prob > F          =     0.0001
+                                                R-squared         =     0.0231
+                                                Root MSE          =     8.4888
+
+-----------------------------------------------------------------------------------------
+                        |               Robust
+                  sf12m | Coefficient  std. err.      t    P>|t|     [95% conf. interval]
+------------------------+----------------------------------------------------------------
+      avg_parental_educ |   .0322082   .0917989     0.35   0.726    -.1479594    .2123757
+                   hgcr |   .4455462   .0999499     4.46   0.000     .2493812    .6417113
+                  white |  -.5772288   .6424175    -0.90   0.369    -1.838059    .6836009
+            net_fam_inc |    .000014   .0000268     0.52   0.603    -.0000387    .0000666
+has_healthcare_provider |   .7412035   .9409265     0.79   0.431     -1.10549    2.587897
+                  _cons |   45.82144   1.574962    29.09   0.000     42.73037    48.91251
+-----------------------------------------------------------------------------------------
+
+. estimates store c_2
+
+. 
+. //non-linearity through the educ_sq with controls:
+. 
+. reg sf12p avg_parental_educ parental_educ_sq hgcr white net_fam_inc has_healthcare_provider, robust
+
+Linear regression                               Number of obs     =        896
+                                                F(6, 889)         =      10.77
+                                                Prob > F          =     0.0000
+                                                R-squared         =     0.0493
+                                                Root MSE          =     10.663
+
+-----------------------------------------------------------------------------------------
+                        |               Robust
+                  sf12p | Coefficient  std. err.      t    P>|t|     [95% conf. interval]
+------------------------+----------------------------------------------------------------
+      avg_parental_educ |  -.5223181   .3672078    -1.42   0.155    -1.243013    .1983771
+       parental_educ_sq |   .0374751   .0167414     2.24   0.025     .0046178    .0703324
+                   hgcr |   .4896165   .1446631     3.38   0.001     .2056954    .7735377
+                  white |  -.7443601   .8215368    -0.91   0.365    -2.356738    .8680177
+            net_fam_inc |    .000086   .0000279     3.08   0.002     .0000313    .0001408
+has_healthcare_provider |   .7318317   1.219595     0.60   0.549     -1.66179    3.125454
+                  _cons |   39.71594   2.708457    14.66   0.000     34.40023    45.03166
+-----------------------------------------------------------------------------------------
+
+. estimates store d_1
+
+. 
+. reg sf12m avg_parental_educ parental_educ_sq hgcr white net_fam_inc has_healthcare_provider, robust
+
+Linear regression                               Number of obs     =        896
+                                                F(6, 889)         =       4.34
+                                                Prob > F          =     0.0003
+                                                R-squared         =     0.0232
+                                                Root MSE          =     8.4928
+
+-----------------------------------------------------------------------------------------
+                        |               Robust
+                  sf12m | Coefficient  std. err.      t    P>|t|     [95% conf. interval]
+------------------------+----------------------------------------------------------------
+      avg_parental_educ |  -.0837562   .2822004    -0.30   0.767    -.6376129    .4701006
+       parental_educ_sq |   .0060424   .0140673     0.43   0.668    -.0215666    .0336514
+                   hgcr |   .4377289   .1006683     4.35   0.000     .2401536    .6353041
+                  white |  -.5699513   .6428464    -0.89   0.376    -1.831625    .6917222
+            net_fam_inc |   .0000129   .0000265     0.49   0.626    -.0000391     .000065
+has_healthcare_provider |   .7707811   .9356475     0.82   0.410    -1.065554    2.607117
+                  _cons |   46.39094   1.990841    23.30   0.000     42.48364    50.29823
+-----------------------------------------------------------------------------------------
+
+. estimates store d_2
+
+. 
+. 
+. esttab a_1 b_1 c_1 d_1 using physical.csv, ar2 label
+(output written to physical.csv)
+
+. esttab a_2 b_2 c_2 d_2 using mental.csv, ar2 label
+(output written to mental.csv)
+
+. 
+. 
+. 
+end of do-file
+
+. log close
+      name:  <unnamed>
+       log:  /Users/parmismey/Desktop/to_submit/log.log
+  log type:  text
+ closed on:  23 Nov 2022, 18:44:34
+---------------------------------------------------------------------------------------------------------------------------------------------
